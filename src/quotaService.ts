@@ -11,6 +11,7 @@ export enum QuotaApiMethod {
 export class QuotaService {
   private readonly GET_USER_STATUS_PATH = '/exa.language_server_pb.LanguageServerService/GetUserStatus';
   private readonly COMMAND_MODEL_CONFIG_PATH = '/exa.language_server_pb.LanguageServerService/GetCommandModelConfigs';
+  private readonly GET_UNLEASH_DATA_PATH = '/exa.language_server_pb.LanguageServerService/GetUnleashData';
 
   // 重试配置
   private readonly MAX_RETRY_COUNT = 3;
@@ -24,6 +25,7 @@ export class QuotaService {
   private updateCallback?: (snapshot: QuotaSnapshot) => void;
   private errorCallback?: (error: Error) => void;
   private statusCallback?: (status: 'fetching' | 'retrying', retryCount?: number) => void;
+  private loginStatusCallback?: (isLoggedIn: boolean) => void;
   private isFirstAttempt: boolean = true;
   private consecutiveErrors: number = 0;
   private retryCount: number = 0;
@@ -72,6 +74,10 @@ export class QuotaService {
     this.statusCallback = callback;
   }
 
+  onLoginStatusChange(callback: (isLoggedIn: boolean) => void): void {
+    this.loginStatusCallback = callback;
+  }
+
   startPolling(intervalMs: number): void {
     this.stopPolling();
     this.fetchQuota();
@@ -102,6 +108,25 @@ export class QuotaService {
     }
 
     try {
+      // 首先检查用户是否已登录
+      const isLoggedIn = await this.checkLoginStatus();
+      if (!isLoggedIn) {
+        console.warn('用户未登录，无法获取配额信息');
+        if (this.loginStatusCallback) {
+          this.loginStatusCallback(false);
+        }
+        // 重置错误计数，因为这不是真正的错误
+        this.consecutiveErrors = 0;
+        this.retryCount = 0;
+        this.isFirstAttempt = false;
+        return;
+      }
+
+      // 通知登录状态
+      if (this.loginStatusCallback) {
+        this.loginStatusCallback(true);
+      }
+
       let snapshot: QuotaSnapshot;
       switch (this.apiMethod) {
         case QuotaApiMethod.GET_USER_STATUS: {
@@ -171,6 +196,115 @@ export class QuotaService {
     }
   }
 
+  /**
+   * 检查用户登录状态
+   * 通过 GetUnleashData API 检测，如果响应中包含 userId 则表示已登录
+   */
+  private async checkLoginStatus(): Promise<boolean> {
+    try {
+      const response = await this.makeGetUnleashDataRequest();
+
+      // 检查响应中是否包含 userId
+      const userId = response?.context?.userId;
+      const hasUserId = userId !== undefined && userId !== null && userId !== '';
+
+      console.log(`登录状态检测: ${hasUserId ? '已登录' : '未登录'}`);
+      if (hasUserId) {
+        console.log(`用户 ID: ${userId}`);
+      }
+
+      return hasUserId;
+    } catch (error: any) {
+      console.error('登录状态检测失败:', error.message);
+      // 如果检测失败，假设未登录
+      return false;
+    }
+  }
+
+  /**
+   * 调用 GetUnleashData API
+   */
+  private async makeGetUnleashDataRequest(): Promise<any> {
+    const requestBody = JSON.stringify({
+      context: {
+        properties: {
+          devMode: "false",
+          extensionVersion: "",
+          hasAnthropicModelAccess: "true",
+          ide: "antigravity",
+          ideVersion: "1.11.2",
+          installationId: "quota-watcher",
+          language: "UNSPECIFIED",
+          os: "windows",
+          requestedModelId: "MODEL_UNSPECIFIED"
+        }
+      }
+    });
+
+    const headers: any = {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(requestBody),
+      'Connect-Protocol-Version': '1'
+    };
+
+    if (this.csrfToken) {
+      headers['X-Codeium-Csrf-Token'] = this.csrfToken;
+    } else {
+      throw new Error('缺少 CSRF Token');
+    }
+
+    const doRequest = (useHttps: boolean, port: number) => new Promise((resolve, reject) => {
+      const options: any = {
+        hostname: '127.0.0.1',
+        port,
+        path: this.GET_UNLEASH_DATA_PATH,
+        method: 'POST',
+        headers
+      };
+
+      if (useHttps) {
+        options.rejectUnauthorized = false;
+      }
+
+      console.log(`请求地址: ${useHttps ? 'https' : 'http'}://127.0.0.1:${port}${this.GET_UNLEASH_DATA_PATH}`);
+
+      const client = useHttps ? https : http;
+      const req = client.request(options, (res: any) => {
+        let data = '';
+        res.on('data', (chunk: any) => { data += chunk; });
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            reject(new Error(`HTTP 错误: ${res.statusCode}`));
+            return;
+          }
+          try {
+            resolve(JSON.parse(data));
+          } catch (error) {
+            reject(new Error(`解析响应失败: ${error}`));
+          }
+        });
+      });
+
+      req.on('error', (error: any) => reject(error));
+      req.on('timeout', () => { req.destroy(); reject(new Error('请求超时')); });
+      req.setTimeout(5000);
+      req.write(requestBody);
+      req.end();
+    });
+
+    try {
+      return await doRequest(true, this.port);
+    } catch (error: any) {
+      const msg = (error?.message || '').toLowerCase();
+      const shouldRetryHttp = this.httpPort !== undefined && (error.code === 'EPROTO' || msg.includes('wrong_version_number'));
+      if (shouldRetryHttp) {
+        console.warn('HTTPS 失败，尝试 HTTP fallback 端口:', this.httpPort);
+        return await doRequest(false, this.httpPort!);
+      }
+      throw error;
+    }
+  }
+
   private async makeGetUserStatusRequest(): Promise<any> {
     const requestBody = JSON.stringify({
       metadata: {
@@ -188,7 +322,7 @@ export class QuotaService {
 
     if (this.csrfToken) {
       headers['X-Codeium-Csrf-Token'] = this.csrfToken;
-      console.log('使用 CSRF token:', this.csrfToken.substring(0, 8) + '...');
+      console.log('使用 CSRF token:', this.csrfToken.substring(0, 4) + '...');
     } else {
       throw new Error('缺少 CSRF Token');
     }
@@ -264,7 +398,7 @@ export class QuotaService {
 
     if (this.csrfToken) {
       headers['X-Codeium-Csrf-Token'] = this.csrfToken;
-      console.log('使用 CSRF token:', this.csrfToken.substring(0, 8) + '...');
+      console.log('使用 CSRF token:', this.csrfToken.substring(0, 4) + '...');
     } else {
       throw new Error('缺少 CSRF Token');
     }

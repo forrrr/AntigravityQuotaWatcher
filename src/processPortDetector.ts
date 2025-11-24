@@ -159,21 +159,30 @@ export class ProcessPortDetector {
 
   /**
    * 测试端口是否能响应 API 请求
+   * 使用 GetUnleashData 端点，因为它不需要用户登录即可访问
    */
   private async testPortConnectivity(port: number, csrfToken: string): Promise<boolean> {
     return new Promise((resolve) => {
       const requestBody = JSON.stringify({
-        metadata: {
-          ideName: 'antigravity',
-          extensionName: 'antigravity',
-          locale: 'en'
+        context: {
+          properties: {
+            devMode: "false",
+            extensionVersion: "",
+            hasAnthropicModelAccess: "true",
+            ide: "antigravity",
+            ideVersion: "1.11.2",
+            installationId: "test-detection",
+            language: "UNSPECIFIED",
+            os: "windows",
+            requestedModelId: "MODEL_UNSPECIFIED"
+          }
         }
       });
 
       const options = {
         hostname: '127.0.0.1',
         port: port,
-        path: '/exa.language_server_pb.LanguageServerService/GetUserStatus',
+        path: '/exa.language_server_pb.LanguageServerService/GetUnleashData',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

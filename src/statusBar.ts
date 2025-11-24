@@ -272,6 +272,14 @@ export class StatusBarService {
     this.statusBarItem.show();
   }
 
+  showNotLoggedIn(): void {
+    this.statusBarItem.text = '$(account) 未登录 Antigravity';
+    this.statusBarItem.backgroundColor = undefined;
+    this.statusBarItem.color = new vscode.ThemeColor('statusBarItem.warningForeground');
+    this.statusBarItem.tooltip = '请先登录 Google 账户以查看模型配额信息';
+    this.statusBarItem.show();
+  }
+
   show(): void {
     this.statusBarItem.show();
   }

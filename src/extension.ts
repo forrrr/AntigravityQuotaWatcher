@@ -61,7 +61,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // 显示用户提示,提供重试选项
     vscode.window.showWarningMessage(
-      'Antigravity Quota Watcher: 无法检测到 Antigravity 进程。请确保 Antigravity 正在运行。',
+      'Antigravity Quota Watcher: 无法检测到 Antigravity 进程。请确认是否Google账户是否已成功登录。',
       '重试',
       '取消'
     ).then(action => {
@@ -99,6 +99,14 @@ export async function activate(context: vscode.ExtensionContext) {
         statusBarService?.showFetching();
       } else if (status === 'retrying' && retryCount !== undefined) {
         statusBarService?.showRetrying(retryCount, 3); // MAX_RETRY_COUNT = 3
+      }
+    });
+
+    // Register login status callback
+    quotaService.onLoginStatusChange((isLoggedIn: boolean) => {
+      if (!isLoggedIn) {
+        console.log('用户未登录 Antigravity');
+        statusBarService?.showNotLoggedIn();
       }
     });
 
@@ -176,6 +184,13 @@ export async function activate(context: vscode.ExtensionContext) {
               console.error('Quota fetch failed:', error);
               statusBarService?.showError(`Connection failed: ${error.message}`);
             });
+
+            quotaService.onLoginStatusChange((isLoggedIn: boolean) => {
+              if (!isLoggedIn) {
+                console.log('用户未登录 Antigravity');
+                statusBarService?.showNotLoggedIn();
+              }
+            });
           } else {
             // 更新现有服务的端口
             quotaService.setPorts(result.connectPort, result.httpPort);
@@ -195,9 +210,8 @@ export async function activate(context: vscode.ExtensionContext) {
         } else {
           vscode.window.showErrorMessage(
             '❌ 无法检测到有效端口。请确保:\n' +
-            '1. Antigravity 正在运行\n' +
-            '2. language_server_windows_x64.exe 进程存在\n' +
-            '3. 系统有足够权限执行检测命令'
+            '1. Google账户已成功登录\n' +
+            '2. 系统有足够权限执行检测命令'
           );
         }
       } catch (error: any) {

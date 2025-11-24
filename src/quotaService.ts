@@ -145,9 +145,10 @@ export class QuotaService {
         return;
       }
 
-      // 达到最大重试次数，报告错误
-      console.error(`已达到最大重试次数 (${this.MAX_RETRY_COUNT})，停止重试`);
-      this.retryCount = 0; // 重置重试计数，等待下次轮询
+      // 达到最大重试次数,停止轮询
+      console.error(`已达到最大重试次数 (${this.MAX_RETRY_COUNT}),停止轮询`);
+      this.stopPolling(); // 停止定时轮询
+      this.retryCount = 0; // 重置重试计数
 
       if (this.errorCallback) {
         this.errorCallback(error as Error);

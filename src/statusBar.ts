@@ -11,7 +11,7 @@ export class StatusBarService {
   private criticalThreshold: number;
   private showPromptCredits: boolean;
   private displayStyle: 'percentage' | 'progressBar';
-  private lastSnapshot?: QuotaSnapshot;
+
   private isQuickRefreshing: boolean = false;
 
   constructor(
@@ -33,7 +33,7 @@ export class StatusBarService {
 
   updateDisplay(snapshot: QuotaSnapshot): void {
     // 保存最后的快照
-    this.lastSnapshot = snapshot;
+
     // 清除刷新状态
     this.isQuickRefreshing = false;
     // 设置为快速刷新命令,允许用户点击立即刷新

@@ -7,7 +7,7 @@
 
 **A plugin that displays AI model quota status in real-time in the Antigravity status bar.**
 
-###  Demo
+##  Demo
 
 <table>
   <tr>

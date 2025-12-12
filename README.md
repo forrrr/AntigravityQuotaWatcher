@@ -5,11 +5,12 @@
 > [!NOTE]
 > 本插件为非官方工具，与 Antigravity 没有任何关联。
 > 本插件依赖于 Antigravity 语言服务器的内部实现细节，相关机制可能会随时变动。
->
 
-> **💻 系统要求**
->
-> 本插件目前 现已支持 Windows-amd64/Mac/Linux 操作系统，不支持 Windows-arm64系统。
+
+![Windows](https://img.shields.io/badge/Windows--amd64-supported-brightgreen?logo=microsoftwindows&logoColor=white)
+![macOS](https://img.shields.io/badge/macOS-supported-brightgreen?logo=apple&logoColor=white)
+![Linux](https://img.shields.io/badge/Linux-supported-brightgreen?logo=linux&logoColor=white)
+![Windows ARM](https://img.shields.io/badge/Windows--arm64-not%20supported-red?logo=microsoftwindows&logoColor=white)
 
 一个用于监控 Antigravity AI 模型使用配额的 VS Code 插件，配额信息在底部状态栏显示。
 

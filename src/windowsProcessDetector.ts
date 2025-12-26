@@ -6,6 +6,12 @@
 import { IPlatformStrategy } from './platformDetector';
 
 export class WindowsProcessDetector implements IPlatformStrategy {
+    private static readonly SYSTEM_ROOT: string = process.env.SystemRoot || 'C:\\Windows';
+    private static readonly POWERSHELL_PATH: string = `"${WindowsProcessDetector.SYSTEM_ROOT}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"`;
+    private static readonly WMIC_PATH: string = `"${WindowsProcessDetector.SYSTEM_ROOT}\\System32\\wbem\\wmic.exe"`;
+    private static readonly NETSTAT_PATH: string = `"${WindowsProcessDetector.SYSTEM_ROOT}\\System32\\netstat.exe"`;
+    private static readonly FINDSTR_PATH: string = `"${WindowsProcessDetector.SYSTEM_ROOT}\\System32\\findstr.exe"`;
+
     private usePowerShell: boolean = true;
 
     /**
@@ -30,10 +36,10 @@ export class WindowsProcessDetector implements IPlatformStrategy {
     getProcessListCommand(processName: string): string {
         if (this.usePowerShell) {
             // PowerShell 命令:使用 Get-CimInstance 获取进程信息并输出 JSON
-            return `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"name='${processName}'\\" | Select-Object ProcessId,CommandLine | ConvertTo-Json"`;
+            return `${WindowsProcessDetector.POWERSHELL_PATH} -NoProfile -Command "Get-CimInstance Win32_Process -Filter \\"name='${processName}'\\" | Select-Object ProcessId,CommandLine | ConvertTo-Json"`;
         } else {
             // WMIC 命令(传统方式)
-            return `wmic process where "name='${processName}'" get ProcessId,CommandLine /format:list`;
+            return `${WindowsProcessDetector.WMIC_PATH} process where "name='${processName}'" get ProcessId,CommandLine /format:list`;
         }
     }
 
@@ -184,7 +190,9 @@ export class WindowsProcessDetector implements IPlatformStrategy {
      * Get command to list ports for a specific process using netstat.
      */
     getPortListCommand(pid: number): string {
-        return `netstat -ano | findstr "${pid}" | findstr "LISTENING"`;
+        const netstat = WindowsProcessDetector.NETSTAT_PATH;
+        const findstr = WindowsProcessDetector.FINDSTR_PATH;
+        return `${netstat} -ano | ${findstr} "${pid}" | ${findstr} "LISTENING"`;
     }
 
     /**

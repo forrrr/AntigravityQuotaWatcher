@@ -4,6 +4,9 @@
 > This plugin is an unofficial tool and has no affiliation with Antigravity.
 > This plugin relies on internal implementation details of the Antigravity language server, which may change at any time.
 
+> [!IMPORTANT]
+> This plugin is **only compatible with Antigravity**. It does NOT support VS Code, Windsurf, Cursor, or other editors.
+
 
 **A plugin that displays AI model quota status in real-time in the Antigravity status bar.**
 

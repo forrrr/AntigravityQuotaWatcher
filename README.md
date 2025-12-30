@@ -6,6 +6,9 @@
 > 本插件为非官方工具，与 Antigravity 没有任何关联。
 > 本插件依赖于 Antigravity 语言服务器的内部实现细节，相关机制可能会随时变动。
 
+> [!IMPORTANT]
+> 本插件**仅适用于 Antigravity**，不支持 VS Code、Windsurf、Cursor 等其他编辑器。
+
 **一个在Antigravity状态栏实时显示AI模型配额剩余情况的插件。**
 
 ## 演示

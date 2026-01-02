@@ -175,7 +175,6 @@ export class StatusBarService {
     md.isTrusted = true;
     md.supportHtml = true;
 
-    // tooltip title 后追加 planName（不受配置控制，始终显示）
     const titleSuffix = snapshot.planName ? ` (${snapshot.planName})` : '';
     md.appendMarkdown(`${this.localizationService.t('tooltip.title')}${titleSuffix}\n\n`);
 

@@ -4,10 +4,12 @@
 
 > [!NOTE]
 > 本插件为非官方工具，与 Antigravity 没有任何关联。
-> 本插件依赖于 Antigravity 语言服务器的内部实现细节，相关机制可能会随时变动。
+> 本插件部分依赖于 Antigravity 语言服务器的内部实现细节，相关机制可能会随时变动。
 
-> [!IMPORTANT]
-> 本插件**仅适用于 Antigravity**，不支持 VS Code、Windsurf、Cursor 等其他编辑器。
+> [!NOTE]
+>  本插件从V0.9.0版本开始支持 VS Code fork IDE（WindSurf, Kiro, VS Code 等）。
+> 如需使用，请在配置中切换到**GOOGLE_API**方式获取模型配额（该方法需要登录Google账号），
+> 该方法不依赖于 Antigravity 本地环境，远程SSH项目也适合这种方法。
 
 **一个在Antigravity状态栏实时显示AI模型配额剩余情况的插件。**
 

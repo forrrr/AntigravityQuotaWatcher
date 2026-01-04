@@ -12,6 +12,8 @@ export interface VersionInfo {
     extensionVersion: string;
     /** IDE name (e.g., "Antigravity", "Visual Studio Code") */
     ideName: string;
+    /** IDE product name from product.json (if available) */
+    productName?: string;
     /** IDE version (e.g., "1.11.2" for Antigravity) */
     ideVersion: string;
     /** VS Code OSS version (e.g., "1.104.0") */
@@ -44,11 +46,13 @@ class VersionInfoService {
 
         // Read IDE version from product.json
         let ideVersion = 'unknown';
+        let productName: string | undefined;
         try {
             const productJsonPath = path.join(vscode.env.appRoot, 'product.json');
             if (fs.existsSync(productJsonPath)) {
                 const productJson = JSON.parse(fs.readFileSync(productJsonPath, 'utf8'));
                 ideVersion = productJson.ideVersion || productJson.version || 'unknown';
+                productName = productJson.nameLong || productJson.applicationName || productJson.nameShort;
             }
         } catch (e) {
             console.warn('[VersionInfo] Failed to read product.json:', e);
@@ -73,6 +77,7 @@ class VersionInfoService {
         this.versionInfo = {
             extensionVersion,
             ideName,
+            productName,
             ideVersion,
             vscodeOssVersion,
             os,
@@ -104,6 +109,22 @@ class VersionInfoService {
      */
     getIdeName(): string {
         return this.versionInfo?.ideName || 'unknown';
+    }
+
+    /**
+     * Determine whether the current IDE is Antigravity.
+     * Uses appName and product name hints (case-insensitive).
+     */
+    isAntigravityIde(): boolean {
+        const candidates = [
+            this.versionInfo?.ideName,
+            this.versionInfo?.productName,
+            vscode.env.appName
+        ]
+            .filter(Boolean)
+            .map(name => name!.toLowerCase());
+
+        return candidates.some(name => name.includes('antigravity'));
     }
 
     /**

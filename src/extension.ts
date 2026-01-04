@@ -13,6 +13,8 @@ import { versionInfo } from './versionInfo';
 import { registerDevCommands } from './devTools';
 import { GoogleAuthService, AuthState, AuthStateInfo } from './auth';
 
+const NON_AG_PROMPT_KEY = 'nonAgSwitchPromptDismissed';
+
 let quotaService: QuotaService | undefined;
 let statusBarService: StatusBarService | undefined;
 let configService: ConfigService | undefined;
@@ -20,6 +22,7 @@ let portDetectionService: PortDetectionService | undefined;
 let googleAuthService: GoogleAuthService | undefined;
 let configChangeTimer: NodeJS.Timeout | undefined;  // 配置变更防抖定时器
 let lastFocusRefreshTime: number = 0;  // 上次焦点刷新时间戳
+let globalState: vscode.Memento | undefined;
 const FOCUS_REFRESH_THROTTLE_MS = 3000;  // 焦点刷新节流阈值
 
 /**
@@ -30,6 +33,7 @@ export async function activate(context: vscode.ExtensionContext) {
   versionInfo.initialize(context);
   console.log(`=== Antigravity Quota Watcher v${versionInfo.getExtensionVersion()} ===`);
   console.log(`Running on: ${versionInfo.getIdeName()} v${versionInfo.getIdeVersion()}`);
+  globalState = context.globalState;
 
   // Init services
   configService = new ConfigService();
@@ -38,6 +42,8 @@ export async function activate(context: vscode.ExtensionContext) {
   // Initialize localization
   const localizationService = LocalizationService.getInstance();
   localizationService.setLanguage(config.language);
+
+  const isAntigravityIde = versionInfo.isAntigravityIde();
 
   // Init status bar
   statusBarService = new StatusBarService(
@@ -57,7 +63,30 @@ export async function activate(context: vscode.ExtensionContext) {
   // 根据 API 方法选择不同的初始化路径
   const apiMethod = getApiMethodFromConfig(config.apiMethod);
 
-  if (apiMethod === QuotaApiMethod.GOOGLE_API) {
+  // 非 Antigravity 环境且用户选择了本地 API 时，给出切换提示
+  const suppressNonAgPrompt = globalState?.get<boolean>(NON_AG_PROMPT_KEY, false);
+  if (!isAntigravityIde && apiMethod === QuotaApiMethod.GET_USER_STATUS && !suppressNonAgPrompt) {
+    const switchLabel = localizationService.t('notify.switchToGoogleApi');
+    const keepLabel = localizationService.t('notify.keepLocalApi');
+    const neverLabel = localizationService.t('notify.neverShowAgain');
+    const selection = await vscode.window.showInformationMessage(
+      localizationService.t('notify.nonAntigravityDetected'),
+      switchLabel,
+      keepLabel,
+      neverLabel
+    );
+
+    if (selection === switchLabel) {
+      await vscode.workspace.getConfiguration('antigravityQuotaWatcher').update('apiMethod', 'GOOGLE_API', true);
+      config = configService.getConfig();
+    } else if (selection === neverLabel) {
+      await globalState?.update(NON_AG_PROMPT_KEY, true);
+    }
+  }
+
+  const resolvedApiMethod = getApiMethodFromConfig(config.apiMethod);
+
+  if (resolvedApiMethod === QuotaApiMethod.GOOGLE_API) {
     // GOOGLE_API 方法：只需要 Google Auth，不需要端口检测
     await initializeGoogleApiMethod(context, config, localizationService);
   } else {
@@ -553,6 +582,9 @@ function handleConfigChange(config: Config): void {
     console.log('Config updated (debounced)', config);
 
     const newApiMethod = getApiMethodFromConfig(config.apiMethod);
+    const localizationService = LocalizationService.getInstance();
+    const isAntigravityIde = versionInfo.isAntigravityIde();
+    const suppressNonAgPrompt = globalState?.get<boolean>(NON_AG_PROMPT_KEY, false);
 
     // Update status bar settings
     statusBarService?.setWarningThreshold(config.warningThreshold);
@@ -564,9 +596,34 @@ function handleConfigChange(config: Config): void {
     statusBarService?.setDisplayStyle(config.displayStyle);
 
     // Update language
-    const localizationService = LocalizationService.getInstance();
     if (localizationService.getLanguage() !== config.language) {
       localizationService.setLanguage(config.language);
+    }
+
+    // 非 Antigravity 环境切换到本地 API 时提示用户
+    const currentApiMethod = quotaService?.getApiMethod();
+    if (
+      !isAntigravityIde &&
+      newApiMethod === QuotaApiMethod.GET_USER_STATUS &&
+      currentApiMethod !== QuotaApiMethod.GET_USER_STATUS &&
+      !suppressNonAgPrompt
+    ) {
+      const switchLabel = localizationService.t('notify.switchToGoogleApi');
+      const keepLabel = localizationService.t('notify.keepLocalApi');
+      const neverLabel = localizationService.t('notify.neverShowAgain');
+      const selection = await vscode.window.showInformationMessage(
+        localizationService.t('notify.nonAntigravityDetected'),
+        switchLabel,
+        keepLabel,
+        neverLabel
+      );
+
+      if (selection === switchLabel) {
+        await vscode.workspace.getConfiguration('antigravityQuotaWatcher').update('apiMethod', 'GOOGLE_API', true);
+        return;
+      } else if (selection === neverLabel) {
+        await globalState?.update(NON_AG_PROMPT_KEY, true);
+      }
     }
 
     // Handle API method change

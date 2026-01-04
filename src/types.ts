@@ -65,6 +65,8 @@ export interface QuotaSnapshot {
   promptCredits?: PromptCreditsInfo;
   models: ModelQuotaInfo[];
   planName?: string;
+  userEmail?: string;  // Google 账号邮箱 (仅 GOOGLE_API 方法)
+  isStale?: boolean;   // 数据是否过时 (网络问题或超时)
 }
 
 export enum QuotaLevel {
@@ -74,7 +76,7 @@ export enum QuotaLevel {
   Depleted = 'depleted'
 }
 
-export type ApiMethodPreference = 'COMMAND_MODEL_CONFIG' | 'GET_USER_STATUS';
+export type ApiMethodPreference = /* 'COMMAND_MODEL_CONFIG' | */ 'GET_USER_STATUS' | 'GOOGLE_API';
 
 export interface Config {
   enabled: boolean;

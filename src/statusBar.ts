@@ -178,6 +178,11 @@ export class StatusBarService {
     const titleSuffix = snapshot.planName ? ` (${snapshot.planName})` : '';
     md.appendMarkdown(`${this.localizationService.t('tooltip.title')}${titleSuffix}\n\n`);
 
+    // 显示 Google 账号邮箱 (仅 GOOGLE_API 方法)
+    if (snapshot.userEmail) {
+      md.appendMarkdown(`📧 ${snapshot.userEmail}\n\n`);
+    }
+
     if (this.showPromptCredits && snapshot.promptCredits) {
       md.appendMarkdown(`${this.localizationService.t('tooltip.credits')}\n`);
       // Use a list for better alignment
@@ -393,6 +398,76 @@ export class StatusBarService {
     this.statusBarItem.backgroundColor = undefined;
     this.statusBarItem.tooltip = this.localizationService.t('status.fetching');
     this.statusBarItem.show();
+  }
+
+  /**
+   * 显示未登录状态 (GOOGLE_API 方式)
+   */
+  showNotLoggedIn(): void {
+    this.statusBarItem.text = this.localizationService.t('status.notLoggedIn');
+    this.statusBarItem.backgroundColor = undefined;
+    this.statusBarItem.tooltip = this.localizationService.t('tooltip.clickToLogin');
+    this.statusBarItem.command = 'antigravity-quota-watcher.googleLogin';
+    this.statusBarItem.show();
+  }
+
+  /**
+   * 显示登录中状态 (GOOGLE_API 方式)
+   */
+  showLoggingIn(): void {
+    this.statusBarItem.text = this.localizationService.t('status.loggingIn');
+    this.statusBarItem.backgroundColor = undefined;
+    this.statusBarItem.tooltip = this.localizationService.t('status.loggingIn');
+    this.statusBarItem.command = undefined;
+    this.statusBarItem.show();
+  }
+
+  /**
+   * 显示登录过期状态 (GOOGLE_API 方式)
+   */
+  showLoginExpired(): void {
+    this.statusBarItem.text = this.localizationService.t('status.loginExpired');
+    this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+    this.statusBarItem.tooltip = this.localizationService.t('tooltip.clickToRelogin');
+    this.statusBarItem.command = 'antigravity-quota-watcher.googleLogin';
+    this.statusBarItem.show();
+  }
+
+  /**
+   * 显示数据过时标志 (网络问题或超时)
+   * 在当前状态栏文本前添加过时图标
+   */
+  showStale(): void {
+    const currentText = this.statusBarItem.text;
+    const staleIcon = this.localizationService.t('status.stale');
+    // 避免重复添加
+    if (!currentText.startsWith(staleIcon)) {
+      this.statusBarItem.text = `${staleIcon} ${currentText}`;
+    }
+    // 更新 tooltip 添加过时警告
+    const currentTooltip = this.statusBarItem.tooltip;
+    if (currentTooltip instanceof vscode.MarkdownString) {
+      const staleWarning = this.localizationService.t('tooltip.staleWarning');
+      // 在开头添加警告
+      const newMd = new vscode.MarkdownString();
+      newMd.isTrusted = true;
+      newMd.supportHtml = true;
+      newMd.appendMarkdown(`${staleWarning}\n\n`);
+      newMd.appendMarkdown(currentTooltip.value);
+      this.statusBarItem.tooltip = newMd;
+    }
+    this.statusBarItem.show();
+  }
+
+  /**
+   * 清除过时标志
+   */
+  clearStale(): void {
+    const currentText = this.statusBarItem.text;
+    const staleIcon = this.localizationService.t('status.stale');
+    if (currentText.startsWith(staleIcon)) {
+      this.statusBarItem.text = currentText.substring(staleIcon.length + 1); // +1 for space
+    }
   }
 
   show(): void {

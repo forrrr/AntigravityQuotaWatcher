@@ -41,7 +41,7 @@ export class PortDetectionService {
 
         console.log(`[PortDetectionService] Detected Connect port (HTTPS): ${processInfo.connectPort}`);
         console.log(`[PortDetectionService] Detected extension port (HTTP): ${processInfo.extensionPort}`);
-        console.log(`[PortDetectionService] Detected CSRF Token: ${processInfo.csrfToken.substring(0, 8)}...`);
+        console.log(`[PortDetectionService] Detected CSRF Token: ${this.maskToken(processInfo.csrfToken)}`);
 
         return {
             // keep compatibility: port is the primary connect port
@@ -52,5 +52,15 @@ export class PortDetectionService {
             source: 'process',
             confidence: 'high'
         };
+    }
+
+    /**
+     * 遮蔽 token，只显示前6位和后4位
+     */
+    private maskToken(token: string): string {
+        if (token.length <= 14) {
+            return '***';
+        }
+        return `${token.substring(0, 6)}***${token.substring(token.length - 4)}`;
     }
 }

@@ -6,6 +6,10 @@ export type TranslationKey =
     | 'status.retrying'
     | 'status.error'
     | 'status.refreshing'
+    | 'status.notLoggedIn'
+    | 'status.loggingIn'
+    | 'status.loginExpired'
+    | 'status.stale'
 
     // Tooltip
     | 'tooltip.title'
@@ -18,6 +22,9 @@ export type TranslationKey =
     | 'tooltip.status'
     | 'tooltip.error'
     | 'tooltip.clickToRetry'
+    | 'tooltip.clickToLogin'
+    | 'tooltip.clickToRelogin'
+    | 'tooltip.staleWarning'
 
     // Notifications (vscode.window.show*Message)
     | 'notify.unableToDetectProcess'
@@ -31,7 +38,12 @@ export type TranslationKey =
     | 'notify.portDetectionFailed'
     | 'notify.configUpdated'
     | 'notify.portCommandRequired'
-    | 'notify.portCommandRequiredDarwin';
+    | 'notify.portCommandRequiredDarwin'
+    | 'notify.googleApiNoPortDetection'
+
+    // Login errors
+    | 'login.error.serviceNotInitialized'
+    | 'login.error.authFailed';
 
 export interface TranslationMap {
     [key: string]: string;

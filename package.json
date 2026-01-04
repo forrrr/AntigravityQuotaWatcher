@@ -2,7 +2,7 @@
   "name": "antigravity-quota-watcher",
   "displayName": "Antigravity Quota Watcher",
   "description": "实时监控 Antigravity的模型使用配额（displays AI model quota status in the status bar）",
-  "version": "0.8.5",
+  "version": "0.9.0",
   "publisher": "wusimpl",
   "icon": "icon.png",
   "engines": {
@@ -40,6 +40,14 @@
       {
         "command": "antigravity-quota-watcher.dev.previewTooltip",
         "title": "Antigravity Dev: 预览 Tooltip"
+      },
+      {
+        "command": "antigravity-quota-watcher.googleLogin",
+        "title": "%command.googleLogin%"
+      },
+      {
+        "command": "antigravity-quota-watcher.googleLogout",
+        "title": "%command.googleLogout%"
       }
     ],
     "configuration": {
@@ -78,7 +86,11 @@
           "default": "GET_USER_STATUS",
           "enum": [
             "GET_USER_STATUS",
-            "COMMAND_MODEL_CONFIG"
+            "GOOGLE_API"
+          ],
+          "enumDescriptions": [
+            "%config.apiMethod.getUserStatus%",
+            "%config.apiMethod.googleApi%"
           ],
           "description": "%config.apiMethod%",
           "order": 40

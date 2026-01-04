@@ -41,7 +41,7 @@
 
 ### Method 1: Install from Open VSX Marketplace (Recommended)
 
-Search for `wusimpl Antigravity Quota Watcher` in the extension marketplace. Look for the plugin by author `wusimpl`. It is currently ranked lower, so you may need to scroll down to find it. Once found, click install.
+Search for `wusimpl Antigravity Quota Watcher @sort:name` in the extension marketplace. Look for the plugin by author `wusimpl` and then just click install.
 
 ![OpenVSX-Search PNG](./images/openvsx-search.png)
 
@@ -73,62 +73,7 @@ How to export logs:
 
 ## Configuration Options
 
-Open VS Code settings (`File` > `Preferences` > `Settings`), and search for `Antigravity Quota Watcher`:
-
-### Enable Auto Monitoring
-- **Default**: `true`
-- **Description**: Whether to enable quota monitoring
-
-### Polling Interval
-- **Default**: `60` (seconds)
-- **Description**: Quota data refresh frequency, recommended to set between 30-60 seconds
-
-### Warning Threshold
-- **Default**: `50` (percentage)
-- **Description**: When quota falls below this percentage, the status bar displays a yellow warning symbol (🟡)
-
-### Critical Threshold
-- **Default**: `30` (percentage)
-- **Description**: When quota falls below this percentage, the status bar displays a red error symbol (🔴)
-
-### Status Bar Display Style
-- **Default**: `progressBar`
-- **Options**:
-  - `progressBar`: Display progress bar (`████░░░░`)
-  - `percentage`: Display percentage (`80%`)
-  - `dots`: Display dots (`●●●○○`)
-- **Description**: Choose the status bar display style
-
-### API Method Selection
-- **Description**:
-  - `GET_USER_STATUS`: Get complete quota information (default method)
-  - `COMMAND_MODEL_CONFIG`: Compatibility mode, less information
-
-### PowerShell Mode (Windows only)
-- **Default**: `true`, if false, uses wmic to detect processes
-- **Description**: Use PowerShell mode to detect processes
-- **Use Case**: If you encounter port detection errors on Windows, try toggling this option. Requires plugin restart to take effect.
-
-### Show Gemini Pro (G Pro) Quota
-- **Default**: `true`
-- **Description**: Whether to display Gemini Pro quota in the status bar
-
-### Show Gemini Flash (G Flash) Quota
-- **Default**: `true`
-- **Description**: Whether to display Gemini Flash quota in the status bar
-
-### Show Account Tier
-- **Default**: `false`
-- **Description**: Whether to display account tier in the status bar (e.g., Free, Pro)
-
-### Language Settings
-- **Default**: `auto`
-- **Options**:
-  - `auto`: Automatically follow VS Code language settings
-  - `en`: English
-  - `zh-cn`: Simplified Chinese
-- **Description**: Set status bar language, defaults to automatically follow VS Code language
-> To change the configuration settings page display language, you need to set Antigravity's language to Chinese
+For detailed configuration instructions, please see: **[📖 Configuration Documentation](./CONFIG.en.md)**
 
 
 ### Command Palette

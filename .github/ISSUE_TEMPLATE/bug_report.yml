@@ -53,6 +53,8 @@ body:
           required: true
         - label: 我已经检查过是否有相同的 Issue
           required: true
+        - label: 我确认使用的插件名为 Antigravity Quota Watcher
+          required: true
 
   - type: textarea
     id: description

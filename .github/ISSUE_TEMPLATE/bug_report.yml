@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        感谢反馈！请务必提供完整信息，否则 Issue 可能会被直接关闭。
+        感谢反馈！请务必提供完整信息，以帮我作者更好的排错。
         
         > 💡 不知道怎么导出日志的请看 [README 的介绍](https://github.com/wusimpl/AntigravityQuotaWatcher#提交issue)
 
@@ -33,37 +33,6 @@ body:
     validations:
       required: true
 
-  - type: textarea
-    id: description
-    attributes:
-      label: 问题描述
-      description: 请清晰地描述你遇到的问题
-      placeholder: "描述你遇到了什么问题..."
-    validations:
-      required: true
-
-  - type: textarea
-    id: steps
-    attributes:
-      label: 复现步骤
-      description: 请提供复现此问题的详细步骤
-      placeholder: |
-        1. 打开 IDE
-        2. ...
-        3. ...
-    validations:
-      required: false
-
-  - type: textarea
-    id: logs
-    attributes:
-      label: 运行日志 (必填)
-      description: 请贴入相关错误日志或终端输出
-      placeholder: "在这里粘贴日志内容..."
-      render: shell
-    validations:
-      required: true
-
   - type: dropdown
     id: os
     attributes:
@@ -84,3 +53,33 @@ body:
           required: true
         - label: 我已经检查过是否有相同的 Issue
           required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 请清晰地描述你遇到的问题，可以在此贴截图
+      placeholder: "描述你遇到了什么问题..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤（选填）
+      description: 请提供复现此问题的详细步骤
+      placeholder: |
+        1. 打开 IDE
+        2. ...
+        3. ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 运行日志 (必填)
+      description: 请贴入相关错误日志或终端输出，也可以直接上传日志文件
+      placeholder: "在这里粘贴日志内容，或拖拽日志文件到此处..."
+    validations:
+      required: true

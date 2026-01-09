@@ -46,8 +46,22 @@ export const en: TranslationMap = {
     'notify.portCommandRequired': 'Port detection requires lsof, ss, or netstat. Please install one of them',
     'notify.portCommandRequiredDarwin': 'Port detection requires lsof or netstat. Please install one of them',
     'notify.googleApiNoPortDetection': 'Google API method does not require port detection. Please use Google Login instead.',
+    'notify.pleaseLoginFirst': 'Please login with Google first',
 
     // Login errors
     'login.error.serviceNotInitialized': 'Auth service not initialized',
-    'login.error.authFailed': 'Authentication failed'
+    'login.error.authFailed': 'Authentication failed',
+
+    // Local Token detection
+    'notify.localTokenDetected': 'Detected local Antigravity login. Use this account?',
+    'notify.useLocalToken': 'Use local token',
+    'notify.manualLogin': 'Manual login',
+
+    // Token sync check
+    'notify.tokenChanged': 'Antigravity account changed. Sync now?',
+    'notify.tokenRemoved': 'Antigravity logged out. Sync logout?',
+    'notify.syncToken': 'Sync',
+    'notify.keepCurrentToken': 'Keep current',
+    'notify.syncLogout': 'Sync logout',
+    'notify.keepLogin': 'Keep login'
 };

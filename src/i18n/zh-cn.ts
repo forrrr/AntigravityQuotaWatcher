@@ -46,8 +46,22 @@ export const zh_cn: TranslationMap = {
     'notify.portCommandRequired': '端口检测需要 lsof、ss 或 netstat。请安装其中之一',
     'notify.portCommandRequiredDarwin': '端口检测需要 lsof 或 netstat。请安装其中之一',
     'notify.googleApiNoPortDetection': 'Google API 方法不需要端口检测。请使用 Google 登录功能。',
+    'notify.pleaseLoginFirst': '请先登录 Google 账号',
 
     // 登录错误
     'login.error.serviceNotInitialized': '认证服务尚未初始化',
-    'login.error.authFailed': '认证失败'
+    'login.error.authFailed': '认证失败',
+
+    // 本地 Token 检测
+    'notify.localTokenDetected': '检测到本地 Antigravity 已登录，是否使用该账号？',
+    'notify.useLocalToken': '使用本地 Token 登录',
+    'notify.manualLogin': '手动登录',
+
+    // Token 同步检查
+    'notify.tokenChanged': '检测到 Antigravity 账号已变更，是否同步？',
+    'notify.tokenRemoved': '检测到 Antigravity 已退出登录，是否同步退出？',
+    'notify.syncToken': '同步',
+    'notify.keepCurrentToken': '保持当前',
+    'notify.syncLogout': '同步退出',
+    'notify.keepLogin': '保持登录'
 };

@@ -250,13 +250,94 @@ export class GoogleAuthService {
 
     /**
      * 登出并清除 Token
+     * @returns 是否实际执行了登出操作（之前是否已登录）
      */
-    public async logout(): Promise<void> {
+    public async logout(): Promise<boolean> {
+        const wasAuthenticated = this.currentState === AuthState.AUTHENTICATED || 
+                                  this.currentState === AuthState.TOKEN_EXPIRED ||
+                                  this.currentState === AuthState.REFRESHING;
+        
         await this.tokenStorage.clearToken();
         this.userEmail = undefined;
         this.lastError = undefined;
         this.setState(AuthState.NOT_AUTHENTICATED);
-        vscode.window.showInformationMessage('已登出 Google 账号');
+        
+        return wasAuthenticated;
+    }
+
+    /**
+     * 使用已有的 refresh_token 登录（从 Antigravity 本地数据库导入）
+     * @param refreshToken 从 Antigravity 提取的 refresh_token
+     * @returns 是否登录成功
+     */
+    public async loginWithRefreshToken(refreshToken: string): Promise<boolean> {
+        console.log('[GoogleAuth] Attempting login with imported refresh_token');
+
+        if (this.currentState === AuthState.AUTHENTICATING || this.currentState === AuthState.REFRESHING) {
+            console.log('[GoogleAuth] Already authenticating/refreshing, skipping');
+            return false;
+        }
+
+        try {
+            this.setState(AuthState.REFRESHING);
+
+            // 使用 refresh_token 获取新的 access_token
+            const params = new URLSearchParams({
+                client_id: GOOGLE_CLIENT_ID,
+                client_secret: GOOGLE_CLIENT_SECRET,
+                refresh_token: refreshToken,
+                grant_type: 'refresh_token',
+            });
+
+            console.log('[GoogleAuth] Sending token refresh request with imported refresh_token...');
+            const response = await this.makeTokenRequest(params);
+            console.log('[GoogleAuth] Token refresh response received, expires_in:', response.expires_in);
+
+            // 构建 TokenData 并保存
+            const tokenData: TokenData = {
+                accessToken: response.access_token,
+                refreshToken: refreshToken, // 使用导入的 refresh_token
+                expiresAt: Date.now() + response.expires_in * 1000,
+                tokenType: response.token_type,
+                scope: response.scope,
+                source: 'imported',  // 从本地 Antigravity 导入
+            };
+
+            await this.tokenStorage.saveToken(tokenData);
+            console.log('[GoogleAuth] Token saved to secure storage');
+
+            this.setState(AuthState.AUTHENTICATED);
+            vscode.window.showInformationMessage('已使用本地 Antigravity 账号登录成功！');
+            return true;
+        } catch (e) {
+            const errorMessage = e instanceof Error ? e.message : String(e);
+            console.error('[GoogleAuth] Login with refresh_token failed:', errorMessage);
+            this.lastError = errorMessage;
+            this.setState(AuthState.ERROR);
+            vscode.window.showErrorMessage(`使用本地 Token 登录失败: ${errorMessage}`);
+            return false;
+        }
+    }
+
+    /**
+     * 将 Token 来源转换为手动登录（用户选择不同步时调用）
+     * 这样后续不会再触发同步校验
+     */
+    public async convertToManualSource(): Promise<void> {
+        try {
+            await this.tokenStorage.updateTokenSource('manual');
+            console.log('[GoogleAuth] Token source converted to manual');
+        } catch (e) {
+            console.error('[GoogleAuth] Failed to convert token source:', e);
+        }
+    }
+
+    /**
+     * 获取当前 Token 来源
+     * @returns Token 来源，'manual' 或 'imported'
+     */
+    public async getTokenSource(): Promise<'manual' | 'imported'> {
+        return await this.tokenStorage.getTokenSource();
     }
 
     /**
@@ -463,6 +544,7 @@ export class GoogleAuthService {
             expiresAt: Date.now() + response.expires_in * 1000,
             tokenType: response.token_type,
             scope: response.scope,
+            source: 'manual',  // 手动登录
         };
     }
 

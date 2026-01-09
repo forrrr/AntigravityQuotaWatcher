@@ -126,6 +126,10 @@
 - 如果状态栏显示错误，可使用"重新检测端口"命令修复
 - **Windows 用户**：如果遇到端口检测错误，可以在设置中切换 `forcePowerShell` 选项。
 
+## 致谢
+ * Google API 配额获取方法来自 [Antigravity-Manager](https://github.com/lbjlaq/Antigravity-Manager) 项目，感谢作者的贡献！
+ * 参考了 [anti-quota](https://github.com/fhyfhy17/anti-quota) 获取 Antigravity 本地登录账号Token的方法，感谢作者的贡献！
+
 [![Star History Chart](https://api.star-history.com/svg?repos=wusimpl/AntigravityQuotaWatcher&type=date&legend=top-left)](https://www.star-history.com/#wusimpl/AntigravityQuotaWatcher&type=date&legend=top-left)
 
 ## 项目使用约定

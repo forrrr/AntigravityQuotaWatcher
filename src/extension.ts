@@ -11,7 +11,7 @@ import { Config, QuotaSnapshot } from './types';
 import { LocalizationService } from './i18n/localizationService';
 import { versionInfo } from './versionInfo';
 import { registerDevCommands } from './devTools';
-import { GoogleAuthService, AuthState, AuthStateInfo } from './auth';
+import { GoogleAuthService, AuthState, AuthStateInfo, extractRefreshTokenFromAntigravity, hasAntigravityDb, TokenSyncChecker } from './auth';
 
 const NON_AG_PROMPT_KEY = 'nonAgSwitchPromptDismissed';
 
@@ -21,10 +21,12 @@ let configService: ConfigService | undefined;
 let portDetectionService: PortDetectionService | undefined;
 let googleAuthService: GoogleAuthService | undefined;
 let configChangeTimer: NodeJS.Timeout | undefined;  // 配置变更防抖定时器
+let localTokenCheckTimer: NodeJS.Timeout | undefined;  // 未登录状态下检查本地 token 的定时器
 let lastFocusRefreshTime: number = 0;  // 上次焦点刷新时间戳
 let globalState: vscode.Memento | undefined;
 const FOCUS_REFRESH_THROTTLE_MS = 3000;  // 焦点刷新节流阈值
 const AUTO_REDETECT_THROTTLE_MS = 30000; // 自动重探端口节流
+const LOCAL_TOKEN_CHECK_INTERVAL_MS = 30000; // 未登录状态下检查本地 token 的间隔
 let lastAutoRedetectTime: number = 0;
 
 /**
@@ -110,9 +112,21 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       console.log('[Extension] quickRefreshQuota command invoked');
       if (!quotaService) {
-        // quotaService 未初始化，自动委托给 detectPort 命令进行重新检测
-        console.log('[Extension] quotaService not initialized, delegating to detectPort command');
-        await vscode.commands.executeCommand('antigravity-quota-watcher.detectPort');
+        // quotaService 未初始化，根据 API 模式给出不同提示
+        config = configService!.getConfig();
+        const currentApiMethod = getApiMethodFromConfig(config.apiMethod);
+        
+        if (currentApiMethod === QuotaApiMethod.GOOGLE_API) {
+          // GOOGLE_API 模式下，提示用户需要先登录
+          console.log('[Extension] quotaService not initialized in GOOGLE_API mode, prompt login');
+          vscode.window.showInformationMessage(
+            localizationService.t('notify.pleaseLoginFirst') || '请先登录 Google 账号'
+          );
+        } else {
+          // 本地 API 模式，委托给 detectPort 命令进行重新检测
+          console.log('[Extension] quotaService not initialized, delegating to detectPort command');
+          await vscode.commands.executeCommand('antigravity-quota-watcher.detectPort');
+        }
         return;
       }
 
@@ -130,9 +144,21 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       console.log('[Extension] refreshQuota command invoked');
       if (!quotaService) {
-        // quotaService 未初始化，自动委托给 detectPort 命令进行重新检测
-        console.log('[Extension] quotaService not initialized, delegating to detectPort command');
-        await vscode.commands.executeCommand('antigravity-quota-watcher.detectPort');
+        // quotaService 未初始化，根据 API 模式给出不同提示
+        config = configService!.getConfig();
+        const currentApiMethod = getApiMethodFromConfig(config.apiMethod);
+        
+        if (currentApiMethod === QuotaApiMethod.GOOGLE_API) {
+          // GOOGLE_API 模式下，提示用户需要先登录
+          console.log('[Extension] quotaService not initialized in GOOGLE_API mode, prompt login');
+          vscode.window.showInformationMessage(
+            localizationService.t('notify.pleaseLoginFirst') || '请先登录 Google 账号'
+          );
+        } else {
+          // 本地 API 模式，委托给 detectPort 命令进行重新检测
+          console.log('[Extension] quotaService not initialized, delegating to detectPort command');
+          await vscode.commands.executeCommand('antigravity-quota-watcher.detectPort');
+        }
         return;
       }
 
@@ -335,7 +361,10 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      await googleAuthService.logout();
+      const wasLoggedIn = await googleAuthService.logout();
+      if (wasLoggedIn) {
+        vscode.window.showInformationMessage('已登出 Google 账号');
+      }
       // 如果当前配置为 GOOGLE_API，立即停止轮询并更新状态栏
       config = configService!.getConfig();
       if (config.apiMethod === 'GOOGLE_API') {
@@ -356,7 +385,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     switch (stateInfo.state) {
       case AuthState.AUTHENTICATED:
-        // 登录成功，刷新配额并恢复轮询
+        // 登录成功，停止本地 token 检查，刷新配额并恢复轮询
+        stopLocalTokenCheckTimer();
         if (currentConfig?.enabled) {
           quotaService?.startPolling(currentConfig.pollingInterval);
           quotaService?.quickRefresh();
@@ -366,11 +396,15 @@ export async function activate(context: vscode.ExtensionContext) {
         quotaService?.stopPolling();
         statusBarService?.clearStale();
         statusBarService?.showNotLoggedIn();
+        // 启动本地 token 检查定时器
+        startLocalTokenCheckTimer();
         break;
       case AuthState.TOKEN_EXPIRED:
         quotaService?.stopPolling();
         statusBarService?.clearStale();
         statusBarService?.showLoginExpired();
+        // 启动本地 token 检查定时器
+        startLocalTokenCheckTimer();
         break;
       case AuthState.AUTHENTICATING:
         statusBarService?.showLoggingIn();
@@ -427,11 +461,74 @@ async function initializeGoogleApiMethod(
   // Check auth state and start polling
   const authState = googleAuthService!.getAuthState();
   if (authState.state === AuthState.NOT_AUTHENTICATED) {
+    // 检查本地 Antigravity 是否有已存储的 token
+    if (hasAntigravityDb()) {
+      console.log('[Extension] Detected local Antigravity installation, checking for stored token...');
+      const refreshToken = await extractRefreshTokenFromAntigravity();
+      
+      if (refreshToken) {
+        console.log('[Extension] Found local Antigravity token, prompting user...');
+        
+        // 先设置为未登录状态并启动定时器，避免弹窗自动消失时状态栏卡住
+        // 因为 VS Code 的 showInformationMessage 在弹窗自动消失时 Promise 可能不会立即 resolve
+        statusBarService!.showNotLoggedIn();
+        statusBarService!.show();
+        startLocalTokenCheckTimer();
+        console.log('[Extension] Pre-set status to not logged in before showing prompt');
+        
+        const useLocalToken = localizationService.t('notify.useLocalToken') || '使用本地 Token 登录';
+        const manualLogin = localizationService.t('notify.manualLogin') || '手动登录';
+        
+        // 使用非阻塞方式处理弹窗，不等待用户响应
+        vscode.window.showInformationMessage(
+          localizationService.t('notify.localTokenDetected') || '检测到本地 Antigravity 已登录，是否使用该账号？',
+          useLocalToken,
+          manualLogin
+        ).then(async (selection) => {
+          if (selection === useLocalToken) {
+            console.log('[Extension] User selected to use local token');
+            stopLocalTokenCheckTimer();
+            statusBarService!.showLoggingIn();
+            const success = await googleAuthService!.loginWithRefreshToken(refreshToken);
+            if (success) {
+              // 登录成功，开始轮询
+              if (config.enabled) {
+                console.log('[Extension] GOOGLE_API: Starting quota polling after local token login...');
+                statusBarService!.showFetching();
+                quotaService!.startPolling(config.pollingInterval);
+              }
+              statusBarService!.show();
+            } else {
+              // 登录失败，恢复未登录状态
+              console.log('[Extension] Local token login failed, reverting to not logged in');
+              statusBarService!.showNotLoggedIn();
+              statusBarService!.show();
+              startLocalTokenCheckTimer();
+            }
+          } else if (selection === manualLogin) {
+            console.log('[Extension] User selected manual login');
+            // 状态已经是未登录，定时器已启动，无需额外操作
+          } else {
+            console.log('[Extension] User dismissed the prompt (selection: undefined)');
+            // 弹窗被关闭或自动消失，状态已经是未登录，定时器已启动，无需额外操作
+          }
+        });
+        
+        // 不等待弹窗响应，直接返回
+        return;
+      }
+    }
+    
+    // 无论是没有本地 token，还是用户关闭弹窗，都显示未登录状态
     statusBarService!.showNotLoggedIn();
     statusBarService!.show();
+    // 启动本地 token 检查定时器，以便后续检测到本地登录
+    startLocalTokenCheckTimer();
   } else if (authState.state === AuthState.TOKEN_EXPIRED) {
     statusBarService!.showLoginExpired();
     statusBarService!.show();
+    // Token 过期时也启动本地 token 检查定时器
+    startLocalTokenCheckTimer();
   } else if (config.enabled) {
     console.log('[Extension] GOOGLE_API: Starting quota polling...');
     statusBarService!.showFetching();
@@ -523,6 +620,54 @@ async function initializeLocalApiMethod(
 }
 
 /**
+ * 启动本地 token 检查定时器（未登录状态下使用）
+ * 定期检查本地 Antigravity 是否有可用的 token
+ */
+function startLocalTokenCheckTimer(): void {
+  // 如果已经在运行，不重复启动
+  if (localTokenCheckTimer) {
+    console.log('[LocalTokenCheck] Timer already running');
+    return;
+  }
+
+  // 只在 GOOGLE_API 模式下启动
+  const config = configService?.getConfig();
+  if (config?.apiMethod !== 'GOOGLE_API') {
+    return;
+  }
+
+  console.log('[LocalTokenCheck] Starting local token check timer');
+  const tokenSyncChecker = TokenSyncChecker.getInstance();
+
+  localTokenCheckTimer = setInterval(async () => {
+    console.log('[LocalTokenCheck] Checking for local token...');
+    await tokenSyncChecker.checkLocalTokenWhenNotLoggedIn(
+      // onLocalTokenLogin: 本地 token 登录成功
+      () => {
+        console.log('[LocalTokenCheck] Local token login successful');
+        stopLocalTokenCheckTimer();
+        const currentConfig = configService?.getConfig();
+        if (currentConfig?.enabled && quotaService) {
+          statusBarService?.showFetching();
+          quotaService.startPolling(currentConfig.pollingInterval);
+        }
+      }
+    );
+  }, LOCAL_TOKEN_CHECK_INTERVAL_MS);
+}
+
+/**
+ * 停止本地 token 检查定时器
+ */
+function stopLocalTokenCheckTimer(): void {
+  if (localTokenCheckTimer) {
+    console.log('[LocalTokenCheck] Stopping local token check timer');
+    clearInterval(localTokenCheckTimer);
+    localTokenCheckTimer = undefined;
+  }
+}
+
+/**
  * Register common callbacks for quota service
  */
 function registerQuotaServiceCallbacks(): void {
@@ -533,6 +678,33 @@ function registerQuotaServiceCallbacks(): void {
   // Register quota update callback
   quotaService.onQuotaUpdate((snapshot: QuotaSnapshot) => {
     statusBarService?.updateDisplay(snapshot);
+
+    // 对于 GOOGLE_API 方法，检查 Token 同步状态
+    const apiMethod = quotaService?.getApiMethod();
+    if (apiMethod === QuotaApiMethod.GOOGLE_API) {
+      const tokenSyncChecker = TokenSyncChecker.getInstance();
+      tokenSyncChecker.checkAndHandle(
+        // onTokenChanged: 刷新配额
+        () => {
+          quotaService?.quickRefresh();
+        },
+        // onLogout: 停止轮询，显示未登录，启动本地 token 检查
+        () => {
+          quotaService?.stopPolling();
+          statusBarService?.clearStale();
+          statusBarService?.showNotLoggedIn();
+          startLocalTokenCheckTimer();
+        },
+        // onLocalTokenLogin: 本地 token 登录成功，停止检查定时器，开始轮询
+        () => {
+          stopLocalTokenCheckTimer();
+          const config = configService?.getConfig();
+          if (config?.enabled) {
+            quotaService?.startPolling(config.pollingInterval);
+          }
+        }
+      );
+    }
   });
 
   // Register error callback (silent, only update status bar)
@@ -570,6 +742,11 @@ function registerQuotaServiceCallbacks(): void {
       } else {
         statusBarService?.showNotLoggedIn();
       }
+      // 未登录或 token 过期时，启动本地 token 检查定时器
+      startLocalTokenCheckTimer();
+    } else {
+      // 已登录，停止本地 token 检查定时器
+      stopLocalTokenCheckTimer();
     }
   });
 
@@ -650,6 +827,41 @@ function handleConfigChange(config: Config): void {
         const authState = googleAuthService.getAuthState();
         if (authState.state === AuthState.NOT_AUTHENTICATED) {
           quotaService.stopPolling();
+          
+          // 检查本地 Antigravity 是否有已存储的 token
+          if (hasAntigravityDb()) {
+            console.log('[ConfigChange] Detected local Antigravity installation, checking for stored token...');
+            const refreshToken = await extractRefreshTokenFromAntigravity();
+            
+            if (refreshToken) {
+              console.log('[ConfigChange] Found local Antigravity token, prompting user...');
+              const useLocalToken = localizationService.t('notify.useLocalToken') || '使用本地 Token 登录';
+              const manualLogin = localizationService.t('notify.manualLogin') || '手动登录';
+              
+              const selection = await vscode.window.showInformationMessage(
+                localizationService.t('notify.localTokenDetected') || '检测到本地 Antigravity 已登录，是否使用该账号？',
+                useLocalToken,
+                manualLogin
+              );
+              
+              if (selection === useLocalToken) {
+                statusBarService?.showLoggingIn();
+                const success = await googleAuthService.loginWithRefreshToken(refreshToken);
+                if (success) {
+                  // 登录成功，开始轮询
+                  if (config.enabled) {
+                    quotaService.startPolling(config.pollingInterval);
+                  }
+                  statusBarService?.show();
+                  vscode.window.showInformationMessage(localizationService.t('notify.configUpdated'));
+                  return;
+                }
+                // 登录失败，继续显示未登录状态
+              }
+              // 用户选择手动登录或关闭弹窗，显示未登录状态
+            }
+          }
+          
           statusBarService?.showNotLoggedIn();
           statusBarService?.show();
           vscode.window.showInformationMessage(localizationService.t('notify.configUpdated'));
@@ -728,6 +940,7 @@ function handleConfigChange(config: Config): void {
  */
 export function deactivate() {
   console.log('Antigravity Quota Watcher deactivated');
+  stopLocalTokenCheckTimer();
   quotaService?.dispose();
   statusBarService?.dispose();
 }

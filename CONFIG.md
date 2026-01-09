@@ -27,15 +27,13 @@
 - **说明**：选择状态栏的显示风格
 
 ## API 方法选择
-- **默认值**：`GET_USER_STATUS`
+- **默认值**：`GOOGLE_API`
 - **选项**：
   - `GOOGLE_API`：远程模式 - 直接调用 Google Cloud Code API 获取配额，数据基本是最新的，响应快速
   - `GET_USER_STATUS`：本地模式 - 通过本地 Antigravity 语言服务器获取配额，存在较大延迟（因为依赖 LSP）
 - **说明**：选择配额获取方式
 
 ### Google API 方式使用说明
->
-> **致谢**：Google API 配额获取方法来自 [Antigravity-Manager](https://github.com/lbjlaq/Antigravity-Manager) 项目，感谢作者的贡献！
 
 > [!WARNING]
 > **安全提醒**：`GOOGLE_API` 方法需要登录您的 Google 账号以获取 `access token` 和 `refresh token`。这些 token 属于**敏感凭证信息**，若泄露，他人可通过您的 `refresh token` 使用您账号的 AI 额度。

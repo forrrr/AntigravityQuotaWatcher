@@ -123,6 +123,9 @@ Hover over the status bar to see remaining quota and next reset time for all mod
 - If the status bar shows an error, use the "Re-detect Port" command to fix it
 - **Windows Users**: If you encounter port detection errors, you can toggle the `forcePowerShell` option in settings.
 
+## Acknowledgments
+ * The Google API quota retrieval method comes from the [Antigravity-Manager](https://github.com/lbjlaq/Antigravity-Manager) project. Thanks to the author for the contribution!
+ * Referenced the method for obtaining Antigravity local login account Token from [anti-quota](https://github.com/fhyfhy17/anti-quota). Thanks to the author for the contribution!
 
 [![Star History Chart](https://api.star-history.com/svg?repos=wusimpl/AntigravityQuotaWatcher&type=Date)](https://star-history.com/#wusimpl/AntigravityQuotaWatcher&Date)
 

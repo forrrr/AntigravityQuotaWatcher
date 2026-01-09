@@ -7,6 +7,13 @@ import * as vscode from 'vscode';
 import { TOKEN_STORAGE_KEY } from './constants';
 
 /**
+ * Token 来源类型
+ * - 'manual': 用户手动登录（浏览器授权）
+ * - 'imported': 从本地 Antigravity 导入
+ */
+export type TokenSource = 'manual' | 'imported';
+
+/**
  * OAuth Token 数据结构
  */
 export interface TokenData {
@@ -15,6 +22,7 @@ export interface TokenData {
     expiresAt: number;  // Unix timestamp (毫秒)
     tokenType: string;
     scope: string;
+    source?: TokenSource;  // Token 来源，旧版本升级后为 undefined，视为 'manual'
 }
 
 /**
@@ -150,6 +158,28 @@ export class TokenStorage {
         }
         token.accessToken = accessToken;
         token.expiresAt = Date.now() + expiresIn * 1000;
+        await this.saveToken(token);
+    }
+
+    /**
+     * 获取 Token 来源
+     * @returns Token 来源，如果没有 token 或未设置则返回 'manual'（兼容旧版本）
+     */
+    public async getTokenSource(): Promise<TokenSource> {
+        const token = await this.getToken();
+        return token?.source ?? 'manual';
+    }
+
+    /**
+     * 更新 Token 来源
+     * @param source 新的来源
+     */
+    public async updateTokenSource(source: TokenSource): Promise<void> {
+        const token = await this.getToken();
+        if (!token) {
+            throw new Error('No existing token to update');
+        }
+        token.source = source;
         await this.saveToken(token);
     }
 }

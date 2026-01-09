@@ -44,10 +44,24 @@ export type TranslationKey =
     | 'notify.portCommandRequired'
     | 'notify.portCommandRequiredDarwin'
     | 'notify.googleApiNoPortDetection'
+    | 'notify.pleaseLoginFirst'
 
     // Login errors
     | 'login.error.serviceNotInitialized'
-    | 'login.error.authFailed';
+    | 'login.error.authFailed'
+
+    // Local Token detection
+    | 'notify.localTokenDetected'
+    | 'notify.useLocalToken'
+    | 'notify.manualLogin'
+
+    // Token sync check
+    | 'notify.tokenChanged'
+    | 'notify.tokenRemoved'
+    | 'notify.syncToken'
+    | 'notify.keepCurrentToken'
+    | 'notify.syncLogout'
+    | 'notify.keepLogin';
 
 export interface TranslationMap {
     [key: string]: string;

@@ -3,7 +3,7 @@
  */
 
 import * as vscode from 'vscode';
-import { ModelQuotaInfo, QuotaLevel, QuotaSnapshot } from './types';
+import { ModelQuotaInfo, QuotaSnapshot } from './types';
 import { LocalizationService } from './i18n/localizationService';
 
 export class StatusBarService {

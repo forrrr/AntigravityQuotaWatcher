@@ -62,7 +62,6 @@ export class TokenSyncChecker {
      */
     public async checkSync(): Promise<TokenSyncStatus> {
         const tokenStorage = TokenStorage.getInstance();
-        const googleAuthService = GoogleAuthService.getInstance();
         
         // 检查是否已登录
         const hasToken = await tokenStorage.hasToken();

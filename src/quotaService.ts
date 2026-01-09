@@ -1,6 +1,6 @@
 import * as https from "https";
 import * as http from "http";
-import { UserStatusResponse, QuotaSnapshot, PromptCreditsInfo, ModelQuotaInfo, ModelConfig } from "./types";
+import { UserStatusResponse, QuotaSnapshot, PromptCreditsInfo, ModelQuotaInfo } from "./types";
 import { versionInfo } from "./versionInfo";
 import { GoogleAuthService, AuthState } from "./auth";
 import { GoogleCloudCodeClient, GoogleApiError } from "./api";

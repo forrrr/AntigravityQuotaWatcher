@@ -29,7 +29,7 @@ export class PortDetectionService {
     /**
      * Single detection method - read from process arguments.
      */
-    async detectPort(_configuredPort?: number): Promise<PortDetectionResult | null> {
+    async detectPort(): Promise<PortDetectionResult | null> {
         // Get port and CSRF Token from process args
         const processInfo: AntigravityProcessInfo | null = await this.processDetector.detectProcessInfo();
 

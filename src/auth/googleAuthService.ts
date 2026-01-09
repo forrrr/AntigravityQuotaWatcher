@@ -447,7 +447,6 @@ export class GoogleAuthService {
      */
     private async refreshToken(): Promise<void> {
         console.log('[GoogleAuth] Refreshing token...');
-        const previousState = this.currentState;
         this.setState(AuthState.REFRESHING);
 
         try {

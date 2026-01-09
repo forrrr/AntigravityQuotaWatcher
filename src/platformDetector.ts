@@ -91,7 +91,7 @@ export class PlatformDetector {
      */
     getStrategy(): IPlatformStrategy {
         switch (this.platform) {
-            case 'win32':
+            case 'win32': {
                 const windowsDetector = new WindowsProcessDetector();
 
                 // 读取用户配置，检查是否强制使用 PowerShell 模式
@@ -103,6 +103,7 @@ export class PlatformDetector {
                 console.log(`[PlatformDetector] Configuration: forcePowerShell=${forcePowerShell}, using ${forcePowerShell ? 'PowerShell' : 'WMIC'} mode`);
 
                 return windowsDetector;
+            }
             case 'darwin':
             case 'linux':
                 return new UnixProcessDetector(this.platform);

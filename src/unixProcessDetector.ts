@@ -137,7 +137,7 @@ export class UnixProcessDetector implements IPlatformStrategy {
             }
 
             const portMatch = cmd.match(/--extension_server_port[=\s]+(\d+)/);
-            const tokenMatch = cmd.match(/--csrf_token[=\s]+([a-f0-9\-]+)/i);
+            const tokenMatch = cmd.match(/--csrf_token[=\s]+([a-f0-9-]+)/i);
 
             // 必须同时满足：有 csrf_token 且是 Antigravity 进程
             if (tokenMatch && tokenMatch[1] && this.isAntigravityProcess(cmd)) {

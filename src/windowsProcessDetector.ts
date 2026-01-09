@@ -214,7 +214,7 @@ export class WindowsProcessDetector implements IPlatformStrategy {
         // Match IPv4: 127.0.0.1:port, 0.0.0.0:port
         // Match IPv6: [::1]:port, [::]:port
         // Foreign address can be: 0.0.0.0:0, *:*, [::]:0, etc.
-        const portRegex = /(?:127\.0\.0\.1|0\.0\.0\.0|\[::1?\]):(\d+)\s+\S+\s+LISTENING/gi;
+        const portRegex = /(?:127\.0\.0\.1|0\.0\.0\.0|\[::1?]):(\d+)\s+\S+\s+LISTENING/gi;
         const ports: number[] = [];
         let match;
 
